@@ -35,7 +35,6 @@
 
 #include "sph_groestl.h"
 
-#if !defined(__AES__)
 
 #ifdef __cplusplus
 extern "C"{
@@ -3119,5 +3118,4 @@ sph_groestl512_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst)
 #ifdef __cplusplus
 }
 
-#endif  // !AES
 #endif

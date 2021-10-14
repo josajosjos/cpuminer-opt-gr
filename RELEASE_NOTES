@@ -47,7 +47,7 @@ Please include the following information:
 2. Exact command line (except user and pw) and intial output showing
    the above requested info.
 
-3. Additional program output showing any error messages or other
+3. Additional program output howing any error messages or other
    pertinent data.
 
 4. A clear description of the problem including history, scope,
@@ -65,84 +65,249 @@ If not what makes it happen or not happen?
 Change Log
 ----------
 
-v3.18.1
+1.2.0
 
-More speed for scrypt:
- - additional scryptn2 optimizations for all CPU architectures,
- - AVX2 is now used by default on CPUS with SHA but not AVX512,
- - scrypt:1024 performance lost in v3.18.0 is restored,
- - AVX512 & AVX2 improvements to scrypt:1024.
+#### Windows Fixes:
+- Fix MSR setup.
+- Properly close/stop WinRing0 driver after closing the miner.
+- Fix problems with stratum switching while using SSL stratum.
+- Compiled binaries should now properly handle multi NUMA configurations.
+- Disable QuickEdit on Windows. Prevents user from accidentally freezing the miner.
 
-Big speedup for SwiFFTx AVX2 & SSE4.1: x22i +55%, x25x +22%.
+#### General Fixes:
+- Fix inaccurate Average hashrate counter that was displayed above each "Periodic Report".
+- Fix the problem of "Low difficulty share" in situations where the new block 
+  is found almost instantly.
+- Add Large Pages to different NUMA nodes if some have 0 or not enough memory (Linux).
+- Minor fixes.
 
-Issue #337: fixed a problem that could display negative stats values in the
-first summary report if the report was forced prematurely due to a stratum
-diff change. The stats will still be invalid but should display zeros.
+#### General Changes:
+- Linux binaries system main requirements: libssl-1.1, libcurl-4, glibc-2.16.
+- Added autodetect script to the linux and Windows binary packages.
+  They should start the best possible binary for the CPU used by the user.
+- Added default `config.json` file that is used to provide flags in one simple place.
+- Benchmark provides even more accurate results and takes into consideration
+  sub rotations.
+- Doing benchmark of the miner now creates `benchmark.log` file with results.
+- Automatically add lost shares to a new entry in "Periodic Report" 
+  instead of displaying a warning about share mismatch.
+- Remove some unused debug output.
+- Show progress of the tuning process in percent as well as 
+  tests_done / tests_total and estimate of time remaining.
+- Pass benchmark and tuning speed to the API.
+- Provide info about the rotation of the current block and a rough speed estimate.
 
-v3.18.0
+#### Algorithm Improvements:
+- General optimizations for GhostRider (~0-2% increase).
+- New tuning process (up to 15% increase, most noticeable on Intel and Zen/Zen+ CPUs):
+-- Dynamic thread usage - Especially useful for cache starved CPUs like Intels 
+   and mobile CPUs. Lifts the performance on the more cache-heavy rotations by
+   not using some threads while maintaining the best performance on rotations
+   not requiring that much cache.
+-- Different prefetch methods - This can bring more performance on CPUs with
+   higher overclocks and 2 sticks of RAM while maintaining proper performance
+   on CPUs that are underclocked and have 1 stick of RAM.
+-- Tune for 2 sub rotations in each rotation to maximize the performance.
+- Update algorithms with improvements from JDD cpuminer-opt 3.18.0
 
-Complete rewrite of Scrypt code, optimized for large N factor (scryptn2):
-  - AVX512 & SHA support for sha256, AVX512 has priority,
-  - up to 50% increase in hashrate,
-  - memory requirements reduced 30-60% depending on CPU architecture,
-  - memory usage displayed at startup,
-  - scrypt, default N=1024 (LTC), will likely perform slower.
+#### Flags:
+- Add `--url-backup=URL:PORT` - enable backup/failover stratum for the user.
+- Add `--log=FILE` - simple log file of the miner output. Useful on Windows.
+- Remove `--tune-simple`.
+- Add missing `--no-msr` (`-y`) long flag.
+- All flags (like `-y` `--tune-full`) are available on all releases but won't 
+  do anything if they are not compatible. Should provide better universal 
+  usage and script creation.
 
-Improved stale share detection and handling for Scrypt with large N factor:
-  - abort and discard partially computed hash when new work is detected,
-  - quicker response to new job, less time wasted mining stale job.
+#### Compilation:
+- Fix compilation errors on systems with archaic kernels (CentOS 7, Fedora, Ubuntu).
+- Requires c++20 capable compiler. gcc-10 is recommended. gcc-8 minimum.
+- Compilation tested on: 
+-- CentOS 7, CentOS 8.4
+-- Fedora 24, Fedora 28, Fedora 34
+-- Ubuntu 16.04, Ubuntu 18.04, Ubuntu 20.04
+- Binaries tested on:
+-- CentOS 7 - Requires manual installation of libssl-1.1
+-- CentOS 8.4 - OK
+-- Fedora 24 - Requires manual installation of libssl-1.1 
+-- Fedora 28, 34 - OK
+-- Ubuntu 16.04 - Requires manual installation of libssl-1.1
+-- Ubuntu 18.04, 20.04 - OK
 
-Improved stale share handling for all algorithms:
-  - report possible stale share when new work received with a previously
-    submitted share still pending,
-  - when new work is detected report the submission of an already completed,
-    otherwise valid, but likely stale, share,
-  - fixed incorrect block height in stale share log.
 
-Small performance improvements to sha, bmw, cube & hamsi for AVX512 & AVX2.
+1.1.9
 
-When stratum disconnects miner threads go to idle until reconnected.
+#### Fixes:
+- Fix miner stop with `--max-temp` switch.
+- Revert some changes so the miner is not so memory sensitive. 1.1.8 could have lower
+performance on 1 stick or slower RAM compared to 1.1.7.
 
-Colour changes to some logs.
+#### Changes:
+- Include some VAES optimizations for Cryptonight (~1-4% increase).
+- Optimizations for Cryptonight implode/explode (~1-2% increase).
 
-Some low level function name changes for clarity and consistency.
+#### Added:
+- Add `--donation` (`-d`) long flag for use with config files, usefull in HiveOS.
 
-The reference hashrate in the summary log and the benchmark total hashrate
-are now the mean hashrate for the session. 
+1.1.8
 
-v3.17.1
+#### Fixes:
+- Fix rare cases of Low Difficulty share stream after lost connection.
+- Display proper Cryptonight variants used with new blocks.
+- Properly calculate real current, min, max, avg hashrate - Hashes done by the miner.
+- Block sends of shares with mixed address RTM/WATC/BUTK to the pool.
 
-Fixed Windows build for AES+SSE4.2 (Westmere), was missing AES.
-More ternary logic optimizations for AVX512, AVX512+VAES, and AVX512+AES.
-Fixed my-gr algo for VAES.
+#### Changes:
+- Check for the `--max-temp=N` with every submitted share and ~20s. Previously was ~60s and with new block/job.
+- Increase performance of 2 Cryptonight variants and some general Cryptonight changes in GR algo (5-8%). Re-tuning of the miner is recommended!
+- Better support for WATC/BUTK mining.
+- Provide better info during the tuning process.
+- `--benchmark` - Now provides true average hashrate from each rotation and estimated pool average.
+- Dev fee changed from 1% to 1.75% with the ability to decrease it back to 1.25% using `-d X` flag.
 
-v3.17.0
+#### Added:
+- `--force-tune` - Forces tuning regardless if the `tune_config` file is present. Useful on HiveOS.
+- `--benchmark-old` - Old ratios of calculating hashrate. Left for comparison purposes with the previous version.
 
-AVX512 optimized using ternary logic instructions.
-Faster sha256t on all CPU architectures: AVX512 +30%, SHA +30%, AVX2 +9%.
-Use SHA on supported CPUs to produce merkle hash.
-Fixed byte order in Extranonce2 log & replaced Block height with Job ID.
+#### Removed:
+- All algorithms support that is not used by Ghost Rider (GR) algorithm.
 
-v3.16.5
+#### Notes:
+- Ausminers and I have put a great amount of time and work into the miner for this next increase,
+so we had to up the dev fee % slightly to 1.75% to help offset that time and allow us to work
+on it more in the future. It can still be set with the `-d` parameter back to 1.25%
 
-#329: Fixed GBT incorrect target diff in stats, second attempt.
-Fixed formatting error in share result log when --no-color option is used.
+1.1.7
 
-v3.16.4
+#### Fixes:
+- Fix stratum reconnection problems if users were not able to reconnect within the 60-120s.
+- Fix problems with displayed share ping. It could be wrong if some stale shares were skipped. (display only bug)
+- Properly detect problems with Large Pages set up on Linux.
 
-Faster sha512 and sha256 when not using SHA CPU extension.
-#329: Fixed GBT incorrect target diff in stats.
+#### Improvements:
+- Include `tune_config` preset files for many CPU models done with the highest possible tuning options. Thanks again to the community for this amazing contribution.
+- Detect multiple NUMA nodes on the system and allocate Large Pages to individual nodes.
+- Add additional tuning for AVX2+ instruction sets. Users using those binaries are recommended to retune their miner.
+- Default AVX2+ tuning is now extended to 80 minutes. Includes additional tests that should bring more performance (6-18%). Includes options that should benefit most of the CPUs. Use `--tune-simple` for the previous tuning method (34 minutes).
+- Stop stratum functionality until miner tunes if tuning is enabled. Should lead to more accurate results.
+- `--tune-config=FILE` It will also now specify a non-default (tune_config) file where the tune configuration will be saved.
 
-v3.16.3
+#### Added:
+AVX2+ Only!
+- `--tune-full` - 115 minutes. The tuning process tests all possible Cryptonight variants for 4way. Many mobile or low-end CPUs can benefit from it as they are almost always cache starved. It is possible that a longer time from `--tune-full` will not bring any additional performance!
+- `--tune-simple` - 54 minutes. Previous tuning with included 4way implementations of Cryptonight Turtle and Turtlelite variants.
 
-#313 Fix compile error with GCC 11.
-Incremental improvements to verthash.
+#### Build:
+- `libnuma` (libnuma-dev) is now required for building the binaries on Linux.
+
+1.1.6
+
+#### Fixes
+- Fix dev stratum switch. If dev fee collection is not possible, the dev fee will be skipped.
+- Possible fix related to Windows Defender taking an increasing amount of memory if run near the start of the system.
+
+#### Improvements:
+- Tuning available on all instruction sets! Now also improves performance in AVX and non-AES versions of the miner.
+- Changed default behavior. Now the miner is tuning by default unless the `tune_config` file is present or the `--no-tune` flag is specified.
+- `--benchmark` should provide more real-world performance average that users see on pools.
+- Detect problems with stratum connection and stop mining threads until the connection can be reestablished. Until now the miner tried to solve and submit shares even the stratum connection was not established. That could lead to sending many old/stale shares to the pool after successful reconnection.
+- Disable MSR functionality on non-AES architectures as it leads to a decrease in performance in those cases.
+- Tune Cryptonight prefetch and code.
+
+#### Removed:
+- `--cn-config=CONFIG`
+- `--benchmark-config` 
+- `--tune` - This option is now ON by default.
+
+#### Added:
+- `--no-tune` - Disable tuning process.
+
+1.1.5.1
+
+- Fix memory leak on Windows.
+- Fix problems for users mining BUTK.
+
+1.1.5
+
+- Fixed rare problems with stratum switching that resulted in "low difficulty" shares.
+- Minimal tuning for Cryptonight. 1-2% improvement.
+- Fixed Windows binaries for 5000 series AMD CPUs. `--tune` and `--tune-config` now work as they should
+- `--benchmark` - Proper memory flushing. Should give more accurate results. The current benchmark will report lower values compared to previous versions.
+
+1.1.4
+
+- Fix stratum changes. In specific scenarios, it could produce many errors.
+- Bring back some of the lost performance to Ryzens using 1way Cryptonight.
+- Reworked some benchmarking functionality to be more representative of real-world hashing. Results are not comparable to previous versions.
+- Temporarily restricted tuning of Fast variant of Cryptonight due to reports stating lowered hashrate after tuning on Ryzen 5000 series.
+
+1.1.3
+
+- Dev pool is now selected from the list.
+- Show new statistic info about hashrate after each new block.
+- Another attempt to fix stratum issues from some users.
+- Include prefetch for loading / storing data for Cryptonight (~1-2% improvement)
+- Rewrite 2way Cryptonight. (~15-50% improvement)
+- Include 2 new options for AVX2+:
+  -- `--tune` - Optimal tuning for 2way or 1way solving of Cryptonight. Takes ~34 minutes. Creates `tune_config` file that can be used later. It is recommended to run it with `--benchmark` to disable any stratum and network communication. Can be used directly with your normal mining options and will start mining after the tuning process. After doing it once, use `--tune-config` after that.
+  -- `--tune-config=FILE` - Use tuning config generated by `--tune` while mining.
+
+#### The expected improvement compared to 1.1.2 -> 10-30%
+
+1.1.2
+
+- Added automatic Large Pages to the Windows environment. Requires administrator privileges for the one-time setup.
+- Added MSR functionality to the Windows environment. Releases will include `WinRing0x64.sys`, licensed and signed Ring0 Driver to enable this functionality.
+- Added ability to manually set how Cryptonight algorithms should be solved, SSE or AVX2. --cn-config. Changes algorithm to variants in this order: `Turtlelite, Turtle, Darklite, Dark, Lite, Fast`
+presets:
+`light`  - equivalent to 0,0,0,0,0,0 (default)
+`medium` - equivalent to 0,1,1,1,0,0
+`heavy`  - equivalent to 1,1,1,1,1,1
+list of 6 coma ',' separated values:
+0 - Use SSE2 implementation. 1 - Use AVX2
+`--cn-config=medium`
+`--cn-config=1,0,0,1,0,0`
+- Added a long benchmark of each `--cn-config` configuration. `--benchmark-config` It takes around 20 minutes to complete fully.
+
+1.1.1
+
+- Fixed stratum connection errors.
+- Minor improvements to the SSE CN algorithm. Can affect Light/Medium variants.
+
+1.1.0b
+
+- General - Use the latest cpuminer-opt branch.
+- MSR ~2-5% increased performance. Enabled by default. Use `-y` to disable it.
+-- Linux -- Seamless. Requires `root` privileges.
+- Large Pages   ~15-20+% increased performance.
+-- Linux -- Seamless. Requires `root` privileges.
+-- Windows -- Prior one-time configuration required. Follow this 15s tutorial: https://docs.microsoft.com/en-us/sql/database-engine/configure-windows/enable-the-lock-pages-in-memory-option-windows
+A system restart is required after successful configuration.
+- SSE2 - ~2-3% increase in performance compared to the official miner.
+- AVX - ~10-15% increase in performance.
+- AVX2 - ~15-25% increase in performance. Multiple binaries. Performance Light -> Heavy depending on the available L3 cache on the CPU. Big CPUs like Zen3, Threadrippers, and Xeons are most likely to benefit from Heavier implementation. 
+-- Heavey - All 2way
+-- Medium - Mixed SSE & 2way
+-- Light - SSE
+- Benchmark functionality -- 30s+ benchmark that should give the real average performance of the GR algorithm. Especially useful to test which binaries might be better for your CPU.
+- Adjustable Dev Fee -- `-d X` to set donation percentage. Defaults to 1. Can be disabled in the source code.
+
+1.0.0
+
+- Improved hash rate ~2.2X average improvement
+- More consistent hash rate (less variation in hash rate)
+- Xeon Phi Support (I'm a HPC nerd, so seeing 4KHs+ On a Xeon Phi is awesome. The unoptimized version topped out at 800Hs)
+- There is a 1% donation fee built in. (1 min every 100 min)
+
+
+Change Log cpuminer-opt
+-----------------------
 
 v3.16.2
 
 Verthash: midstate prehash optimization for all architectures.
 Verthash: AVX2 optimization.
-GBT: added support for Bech32 addresses.
+GBT: added support for Bech32 addresses, untested.
 Linux: added CPU frequency to benchmark log.
 Fixed integer overflow in time calculations.
 
@@ -184,6 +349,7 @@ RPC getmininginfo method.
 v3.15.5
 
 Fix stratum jobs lost if 2 jobs received in less than one second.
+ 
 
 v3.15.4
 

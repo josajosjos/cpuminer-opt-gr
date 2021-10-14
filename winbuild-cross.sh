@@ -13,11 +13,12 @@ export LOCAL_LIB="$HOME/usr/lib"
 export CONFIGURE_ARGS="--with-curl=$LOCAL_LIB/curl --with-crypto=$LOCAL_LIB/openssl --host=x86_64-w64-mingw32"
 export MINGW_LIB="/usr/x86_64-w64-mingw32/lib"
 # set correct gcc version
-export GCC_MINGW_LIB="/usr/lib/gcc/x86_64-w64-mingw32/9.3-win32"
+export GCC_MINGW_LIB="/usr/lib/gcc/x86_64-w64-mingw32/10-win32"
 # used by GCC
 export LDFLAGS="-L$LOCAL_LIB/curl/lib/.libs -L$LOCAL_LIB/gmp/.libs -L$LOCAL_LIB/openssl"
 
 # make link to local gmp header file.
+rm ./gmp.h 2>/dev/null
 ln -s $LOCAL_LIB/gmp/gmp.h ./gmp.h
 
 # edit configure to fix pthread lib name for Windows.
@@ -25,117 +26,94 @@ ln -s $LOCAL_LIB/gmp/gmp.h ./gmp.h
 
 # make release directory and copy selected DLLs.
 
-rm -rf release > /dev/null
+rm -rf bin/win/ 2>/dev/null
+mkdir -p bin/win/ 2>/dev/null
 
-mkdir release
-cp README.txt release/
-cp README.md release/
-cp RELEASE_NOTES release/
-cp verthash-help.txt release/
-cp $MINGW_LIB/zlib1.dll release/
-cp $MINGW_LIB/libwinpthread-1.dll release/
-cp $GCC_MINGW_LIB/libstdc++-6.dll release/
-cp $GCC_MINGW_LIB/libgcc_s_seh-1.dll release/
-cp $LOCAL_LIB/openssl/libcrypto-1_1-x64.dll release/
-cp $LOCAL_LIB/curl/lib/.libs/libcurl-4.dll release/
+
+cp $MINGW_LIB/zlib1.dll bin/win/
+cp $MINGW_LIB/libwinpthread-1.dll bin/win/
+cp $GCC_MINGW_LIB/libstdc++-6.dll bin/win/
+cp $GCC_MINGW_LIB/libgcc_s_seh-1.dll bin/win/
+cp $LOCAL_LIB/openssl/libcrypto-1_1-x64.dll bin/win/
+cp $LOCAL_LIB/curl/lib/.libs/libcurl-4.dll bin/win/
+
+
+# This flag should be removed for Older Windows versions. It is used to enable
+# CPU Groups that are present in multi NUMA configs.
+# "-D_WIN32_WINNT=0x0601"
+
+DCFLAGS="-Wall -fno-common -Wextra -Wabi -D_WIN32_WINNT=0x0601"
+DCXXFLAGS="-Wno-ignored-attributes"
 
 # Start building...
 
-# Icelake AVX512 SHA VAES
-./clean-all.sh || echo clean
-rm -f config.status
-./autogen.sh || echo done
-CFLAGS="-O3 -march=icelake-client -Wall" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-avx512-sha-vaes.exe
+# 1 - Architecture
+# 2 - Output suffix
+# 3 - Additional options
+compile() {
 
-# Rocketlake AVX512 SHA AES
-make clean || echo clean
-rm -f config.status
-CFLAGS="-O3 -march=cascadelake -msha -Wall" ./configure $CONFIGURE_ARGS
-#CFLAGS="-O3 -march=rocketlake -Wall" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-avx512-sha.exe
+  echo "Compile: $@" 1>&2
+  make distclean || echo clean
+  rm -f config.status
+  ./autogen.sh || echo done
 
-# Zen1 AVX2 AES SHA
-make clean || echo clean
-rm -f config.status
-CFLAGS="-O3 -march=znver1 -Wall" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-zen.exe
+  # For GCC-9 && GCC-8
+  #CXXFLAGS="$CFLAGS -std=c++2a -fconcepts -Wno-ignored-attributes" \
 
-# Zen3 AVX2 SHA VAES
-make clean || echo clean
-rm -f config.status
-CFLAGS="-O3 -march=znver2 -mvaes -Wall" ./configure $CONFIGURE_ARGS
-# CFLAGS="-O3 -march=znver3 -Wall" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-zen3.exe
+  CFLAGS="-O3 -march=${1} ${3} ${DFLAGS}" \
+  CXXFLAGS="$CFLAGS -std=c++20 ${DCXXFLAGS}"  \
+  ./configure ${CONFIGURE_ARGS}
+  make -j $(nproc)
+  strip -s cpuminer.exe
+  mv cpuminer.exe bin/win/${4}/cpuminer-${2}.exe
 
-# Slylake-X AVX512 AES
-# mingw won't compile avx512 without -fno-asynchronous-unwind-tables
-make clean || echo clean
-rm -f config.status
-CFLAGS="-O3 -march=skylake-avx512 -Wall" ./configure $CONFIGURE_ARGS
-#CFLAGS="-O3 -march=skylake-avx512 -Wall -fno-asynchronous-unwind-tables" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-avx512.exe
+}
 
-# Haswell AVX2 AES
-make clean || echo clean
-rm -f config.status
-# GCC 9 doesn't include AES in -march=core-avx2
-CFLAGS="-O3 -march=core-avx2 -maes -Wall" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-avx2.exe
 
-# Sandybridge AVX AES
-make clean || echo clean
-rm -f config.status
-# -march=corei7-avx still includes aes, but just in case
-CFLAGS="-O3 -march=corei7-avx -maes -Wall" ./configure $CONFIGURE_ARGS 
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-avx.exe
-
-# Westmere SSE4.2 AES
-make clean || echo clean
-rm -f config.status
-CFLAGS="-O3 -march=westmere -maes -Wall" ./configure $CONFIGURE_ARGS
-#CFLAGS="-O3 -maes -msse4.2 -Wall" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-aes-sse42.exe
-
-# Nehalem SSE4.2
-#make clean || echo clean
-#rm -f config.status
-#CFLAGS="-O3 -march=corei7 -Wall" ./configure $CONFIGURE_ARGS
-#make 
-#strip -s cpuminer.exe
-#mv cpuminer.exe release/cpuminer-sse42.exe
+#Non-AES
+# Generic SSE2
+compile "x86-64" "sse2" "-msse"
 
 # Core2 SSSE3
-#make clean || echo clean
-#rm -f config.status
-#CFLAGS="-O3 -march=core2 -Wall" ./configure $CONFIGURE_ARGS
-#make 
-#strip -s cpuminer.exe
-#mv cpuminer.exe release/cpuminer-ssse3.exe
-#make clean || echo clean
+compile "core2" "ssse3"
 
-# Generic SSE2
-make clean || echo clean
-rm -f config.status
-CFLAGS="-O3 -msse2 -Wall" ./configure $CONFIGURE_ARGS
-make -j 8
-strip -s cpuminer.exe
-mv cpuminer.exe release/cpuminer-sse2.exe
-make clean || echo clean
+# Nehalem SSE4.2
+compile "corei7" "sse42"
 
+
+#AES
+# Westmere SSE4.2 AES
+compile "westmere" "aes-sse42" "-maes"
+
+# Sandybridge AVX AES
+compile "corei7-avx" "avx" "-maes"
+
+
+#AVX2+
+# Haswell AVX2 AES
+# GCC 9 doesn't include AES with core-avx2
+compile "core-avx2" "avx2" "-maes"
+
+# AMD Zen1 AVX2 SHA
+compile "znver1" "zen" "-mtune=znver1"
+
+# AMD Zen2 AVX2 SHA
+compile "znver2" "zen2" "-mtune=znver2"
+
+# AMD Zen3 AVX2 SHA VAES
+# GCC 10
+compile "znver3" "zen3" "-mtune=znver3"
+# GCC 9
+# compile "znver2" "zen3" "-mvaes -mtune=znver2"
+
+# Icelake AVX512 SHA VAES
+compile "icelake-client" "avx512-sha-vaes" "-mtune=intel"
+
+# Rocketlake AVX512 SHA AES
+compile "cascadelake" "avx512-sha" "-msha -mtune=intel"
+
+# Slylake-X AVX512 AES
+compile "skylake-avx512" "avx512" "-mtune=intel"
+
+# Remove gmp.h
+rm ./gmp.h 2>/dev/null
