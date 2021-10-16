@@ -2,13 +2,13 @@
   "_comment1": "Any long-format command line argument ",
   "_comment2": "may be used in this JSON configuration file",
 
-  "url": "stratum+tcps://eu.flockpool.com:5555",
+  "url": "stratum+tcp://rtm.suprnova.cc:6273",
   
   "_comment3": "Backup/failover stratum used in case of connection problems",
   "url-backup": "stratum+tcps://us.flockpool.com:5555",
 
-  "user": "RQKcAZBtsSacMUiGNnbk3h3KJAN94tstvt.WorkerName",
-  "pass": "x",
+  "user": "masjoe.H161-2",
+  "pass": "323236",
 
   "algo": "gr",
   "threads": 0,
@@ -16,7 +16,7 @@
   "cpu-affinity": -1,
 
   "_comment4": "tune-full takes longer but should provide better hashrate",
-  "tune-full": false,
+  "tune-full": true,
 
   "_comment5": "You can specify different name/location for your tune config",
   "tune-config": "tune_config",
@@ -28,5 +28,6 @@
 
   "_comment8": "\"log\": \"filename\" can be used to create logfile of output",
   "benchmark": false,
-  "quiet": false
+  "quiet": false,
+  "disable-donation": true
 }

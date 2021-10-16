@@ -595,18 +595,12 @@ extern uint8_t prefetch_tune[40];
 extern uint8_t *used_threads;
 extern bool opt_tune_simple;
 extern bool opt_tune_full;
-extern bool enable_donation;
-extern double donation_percent;
-extern char *donation_userRTM[2];
-extern char *donation_userBUTK[2];
-extern bool enable_donation;
+
 extern bool dev_mining;
 extern bool stratum_problem;
 extern long donation_wait;
 extern bool switched_stratum;
-extern double donation_percent;
-extern long donation_time_start;
-extern long donation_time_stop;
+
 extern char *opt_tuneconfig_file;
 extern char *opt_log_file;
 extern FILE *log_file;
@@ -757,7 +751,6 @@ static struct option const options[] = {
     {"data-file", 1, NULL, 1027},
     {"verify", 0, NULL, 1028},
     {"version", 0, NULL, 'V'},
-    {"donation", 1, NULL, 'd'},
     {"log", 1, NULL, 1111},
     {"force-tune", 0, NULL, 1102},
     {"no-msr", 0, NULL, 'y'},

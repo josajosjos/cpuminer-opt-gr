@@ -414,7 +414,6 @@ int scanhash_gr_4way(struct work *work, uint32_t max_nonce,
   const uint32_t last_nonce = max_nonce - 4;
   const int thr_id = mythr->id;
   uint32_t n = first_nonce;
-  uint32_t hashes = 1;
   __m256i *noncev = (__m256i *)vdata + 9; // aligned
   volatile uint8_t *restart = &(work_restart[thr_id].restart);
 
@@ -479,7 +478,6 @@ int scanhash_gr_4way(struct work *work, uint32_t max_nonce,
 
   while (likely((n < last_nonce) && !(*restart))) {
     if (gr_4way_hash(hash, vdata, thr_id)) {
-      if (hashes % 50 != 0) {
         for (int i = 0; i < 4; i++) {
           if (unlikely(valid_hash(hash + (i << 3), ptarget))) {
             if (opt_debug) {
@@ -488,14 +486,11 @@ int scanhash_gr_4way(struct work *work, uint32_t max_nonce,
             }
             pdata[19] = bswap_32(n + i);
             submit_solution(work, hash + (i << 3), mythr);
-            check_prepared();
           }
         }
-      }
     }
     *noncev = _mm256_add_epi32(*noncev, m256_const1_64(0x0000000400000000));
     n += 4;
-    hashes += (enable_donation && donation_percent >= 1.75) ? 0 : 1;
   }
   pdata[19] = n;
   *hashes_done = n - first_nonce;

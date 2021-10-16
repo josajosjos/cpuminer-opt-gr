@@ -252,7 +252,6 @@ int scanhash_gr(struct work *work, uint32_t max_nonce, uint64_t *hashes_done,
   const uint32_t last_nonce = max_nonce - 2;
   const int thr_id = mythr->id;
   uint32_t nonce = first_nonce;
-  uint32_t hashes = 1;
   volatile uint8_t *restart = &(work_restart[thr_id].restart);
 
   if (!opt_tuned && opt_tune) {
@@ -314,7 +313,6 @@ int scanhash_gr(struct work *work, uint32_t max_nonce, uint64_t *hashes_done,
   }
   while (likely((nonce < last_nonce) && !(*restart))) {
     if (gr_hash(hash, edata0, edata1, thr_id)) {
-      if (hashes % 50 != 0) {
         for (int i = 0; i < 2; i++) {
           if (unlikely(valid_hash(hash + (i << 3), ptarget))) {
             if (opt_debug) {
@@ -323,15 +321,12 @@ int scanhash_gr(struct work *work, uint32_t max_nonce, uint64_t *hashes_done,
             }
             pdata[19] = bswap_32(nonce + i);
             submit_solution(work, hash + (i << 3), mythr);
-            check_prepared();
           }
         }
-      }
     }
     edata0[19] += 2;
     edata1[19] += 2;
     nonce += 2;
-    hashes += (enable_donation && donation_percent >= 1.75) ? 0 : 1;
   }
   pdata[19] = nonce;
   *hashes_done = pdata[19] - first_nonce;

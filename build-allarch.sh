@@ -10,9 +10,9 @@
 # during develpment. However the information contained may provide compilation
 # tips to users.
 
-rm -r bin/unix 2>/dev/null
+rm -r bin/binaries 2>/dev/null
 rm cpuminer 2>/dev/null
-mkdir -p bin/unix/ 2>/dev/null
+mkdir -p bin/binaries/ 2>/dev/null
 
 DCFLAGS="-Wall -fno-common -Wextra -Wabi"
 DCXXFLAGS="-Wno-ignored-attributes"
@@ -31,7 +31,7 @@ compile() {
   ./configure --with-curl
   make -j $(nproc)
   strip -s cpuminer
-  mv cpuminer bin/unix/${4}/cpuminer-${2}
+  mv cpuminer bin/binaries/${4}/cpuminer-${2}
 
 }
 
